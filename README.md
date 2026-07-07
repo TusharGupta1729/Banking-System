@@ -66,11 +66,12 @@ Customer
 
 ### Bank
 
-| Field      | Type      |
-|------------|-----------|
-| id         | UUID      |
-| name       | VARCHAR   |
-| created_at | TIMESTAMP |
+| Field       | Type      |
+|-------------|-----------|
+| id          | UUID      |
+| name        | VARCHAR   |
+| head_office | VARCHAR   |
+| created_at  | TIMESTAMP |
 
 ### Branch
 
@@ -79,17 +80,19 @@ Customer
 | id         | UUID      |
 | bank_id    | UUID      |
 | name       | VARCHAR   |
+| ifsc_code  | VARCHAR   |
 | address    | TEXT      |
 
 ### Customer
 
-| Field      | Type      |
-|------------|-----------|
-| id         | UUID      |
-| name       | VARCHAR   |
-| email      | VARCHAR   |
-| phone      | VARCHAR   |
-| password   | VARCHAR   |
+| Field       | Type      |
+|-------------|-----------|
+| id          | UUID      |
+| name        | VARCHAR   |
+| email       | VARCHAR   |
+| phone       | VARCHAR   |
+| password    | VARCHAR   |
+| created_at  | TIMESTAMP |
 
 ### Account
 
@@ -100,7 +103,9 @@ Customer
 | branch_id      | UUID      |
 | account_number | VARCHAR   |
 | balance        | DECIMAL   |
+| account_type   | VARCHAR   |
 | status         | VARCHAR   |
+| created_at     | TIMESTAMP |
 
 ### Transaction
 
@@ -123,6 +128,7 @@ Customer
 | total_amount     | DECIMAL   |
 | pending_amount   | DECIMAL   |
 | status           | VARCHAR   |
+| created_at       | TIMESTAMP |
 
 ---
 
