@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"banking-system/models"
 	"banking-system/services"
@@ -11,6 +12,10 @@ import (
 
 type LoanHandler struct {
 	service *services.LoanService
+}
+
+type RepayLoanRequest struct {
+	Amount float64 `json:"amount"`
 }
 
 func NewLoanHandler(service *services.LoanService) *LoanHandler {
@@ -52,4 +57,97 @@ func (h *LoanHandler) GetLoans(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, loans)
+}
+
+func (h *LoanHandler) ApproveLoan(c *gin.Context) {
+
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 64)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid loan id",
+		})
+		return
+	}
+
+	err = h.service.ApproveLoan(uint(id))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "loan approved successfully",
+	})
+}
+
+func (h *LoanHandler) RejectLoan(c *gin.Context) {
+
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 64)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid loan id",
+		})
+		return
+	}
+
+	err = h.service.RejectLoan(uint(id))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "loan rejected successfully",
+	})
+}
+
+func (h *LoanHandler) RepayLoan(c *gin.Context) {
+
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 64)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid loan id",
+		})
+		return
+	}
+
+	var req RepayLoanRequest
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid request body",
+		})
+		return
+	}
+
+	err = h.service.RepayLoan(
+		uint(id),
+		req.Amount,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "loan repayment successful",
+	})
 }

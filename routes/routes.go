@@ -56,6 +56,9 @@ func SetupRoutes(r *gin.Engine,
 
 	r.POST("/loans", loanHandler.CreateLoan)
 	r.GET("/loans", loanHandler.GetLoans)
+	r.POST("/loans/:id/approve", loanHandler.ApproveLoan)
+	r.POST("/loans/:id/reject", loanHandler.RejectLoan)
+	r.POST("/loans/:id/repay", loanHandler.RepayLoan)
 
 	r.POST("/login", authHandler.Login)
 }
