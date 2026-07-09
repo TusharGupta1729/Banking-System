@@ -27,10 +27,6 @@ func main() {
 
 	fmt.Println("Database connected successfully")
 
-	//-------------------------------------------------------------------------------------------------------
-	// DATABSE CONNECTED WITH SERVER
-	//-------------------------------------------------------------------------------------------------------
-
 	err := config.DB.AutoMigrate(
 		&models.Bank{},
 		&models.Branch{},
@@ -47,12 +43,8 @@ func main() {
 
 	fmt.Println("Migration completed successfully")
 
-	//-------------------------------------------------------------------------------------------------------
-	//-------------------------------------------------------------------------------------------------------
-
 	gin.SetMode(gin.ReleaseMode)
 
-	// Creating gin router
 	r := gin.Default()
 	if err := r.SetTrustedProxies(nil); err != nil {
 		fmt.Println("Failed to configure trusted proxies:", err)
@@ -71,17 +63,23 @@ func main() {
 	customerService := services.NewCustomerService(customerRepo)
 	customerHandler := handlers.NewCustomerHandler(customerService)
 
-	accountRepo := repository.NewAccountRepository()
-	accountService := services.NewAccountService(accountRepo)
-	accountHandler := handlers.NewAccountHandler(accountService)
-
 	transactionRepo := repository.NewTransactionRepository()
 	transactionService := services.NewTransactionService(transactionRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
+	accountRepo := repository.NewAccountRepository()
+	accountService := services.NewAccountService(
+		accountRepo,
+		transactionRepo,
+	)
+	accountHandler := handlers.NewAccountHandler(accountService)
+
 	loanRepo := repository.NewLoanRepository()
 	loanService := services.NewLoanService(loanRepo)
 	loanHandler := handlers.NewLoanHandler(loanService)
+
+	authService := services.NewAuthService(customerRepo)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	routes.SetupRoutes(
 		r,
@@ -91,10 +89,8 @@ func main() {
 		accountHandler,
 		transactionHandler,
 		loanHandler,
+		authHandler,
 	)
-
-	//-------------------------------------------------------------------------------------------------------------
-	//-------------------------------------------------------------------------------------------------------------
 
 	port := os.Getenv("PORT")
 	if port == "" {

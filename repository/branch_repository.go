@@ -19,7 +19,10 @@ func (r *BranchRepository) Create(branch *models.Branch) error {
 func (r *BranchRepository) GetAll() ([]models.Branch, error) {
 	var branches []models.Branch
 
-	err := config.DB.Find(&branches).Error
+	err := config.DB.
+		Preload("Bank").
+		Preload("Accounts").
+		Find(&branches).Error
 
 	return branches, err
 }

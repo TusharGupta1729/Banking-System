@@ -1,10 +1,10 @@
 package services
 
 import (
-	"errors"
-
 	"banking-system/models"
 	"banking-system/repository"
+	"errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type CustomerService struct {
@@ -27,9 +27,31 @@ func (s *CustomerService) CreateCustomer(customer *models.Customer) error {
 		return errors.New("email is required")
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword(
+		[]byte(customer.PasswordHash),
+		bcrypt.DefaultCost,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	customer.PasswordHash = string(hashedPassword)
+
 	return s.repo.Create(customer)
 }
 
 func (s *CustomerService) GetCustomers() ([]models.Customer, error) {
 	return s.repo.GetAll()
+}
+
+func (s *CustomerService) GetCustomerAccounts(id uint) ([]models.Account, error) {
+
+	customer, err := s.repo.GetByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return customer.Accounts, nil
 }

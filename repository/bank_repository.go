@@ -19,7 +19,9 @@ func (r *BankRepository) Create(bank *models.Bank) error {
 func (r *BankRepository) GetAll() ([]models.Bank, error) {
 	var banks []models.Bank
 
-	err := config.DB.Find(&banks).Error
+	err := config.DB.
+		Preload("Branches").
+		Find(&banks).Error
 
 	return banks, err
 }

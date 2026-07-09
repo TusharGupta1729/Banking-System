@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"net/http"
-
 	"banking-system/models"
 	"banking-system/services"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,4 +52,29 @@ func (h *CustomerHandler) GetCustomers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, customers)
+}
+
+func (h *CustomerHandler) GetCustomerAccounts(c *gin.Context) {
+
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 64)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid customer id",
+		})
+		return
+	}
+
+	accounts, err := h.service.GetCustomerAccounts(uint(id))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, accounts)
 }

@@ -7,4 +7,6 @@ type Bank struct {
 
 	Name       string `gorm:"not null"`
 	Headoffice string
+
+	Branches []Branch
 }
