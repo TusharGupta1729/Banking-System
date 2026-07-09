@@ -59,13 +59,42 @@ func main() {
 		return
 	}
 
-	repo := repository.NewBankRepository()
+	bankRepo := repository.NewBankRepository()
+	bankService := services.NewBankService(bankRepo)
+	bankHandler := handlers.NewBankHandler(bankService)
 
-	service := services.NewBankService(repo)
+	branchRepo := repository.NewBranchRepository()
+	branchService := services.NewBranchService(branchRepo)
+	branchHandler := handlers.NewBranchHandler(branchService)
 
-	handler := handlers.NewBankHandler(service)
+	customerRepo := repository.NewCustomerRepository()
+	customerService := services.NewCustomerService(customerRepo)
+	customerHandler := handlers.NewCustomerHandler(customerService)
 
-	routes.SetupRoutes(r, handler)
+	accountRepo := repository.NewAccountRepository()
+	accountService := services.NewAccountService(accountRepo)
+	accountHandler := handlers.NewAccountHandler(accountService)
+
+	transactionRepo := repository.NewTransactionRepository()
+	transactionService := services.NewTransactionService(transactionRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
+
+	loanRepo := repository.NewLoanRepository()
+	loanService := services.NewLoanService(loanRepo)
+	loanHandler := handlers.NewLoanHandler(loanService)
+
+	routes.SetupRoutes(
+		r,
+		bankHandler,
+		branchHandler,
+		customerHandler,
+		accountHandler,
+		transactionHandler,
+		loanHandler,
+	)
+
+	//-------------------------------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------------------------------
 
 	port := os.Getenv("PORT")
 	if port == "" {
