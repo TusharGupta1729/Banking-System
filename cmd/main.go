@@ -16,8 +16,7 @@ import (
 
 func main() {
 	if err := config.LoadEnv(); err != nil {
-		fmt.Println("Error loading .env file")
-		return
+		fmt.Println("env not found using render variables")
 	}
 
 	if err := config.ConnectDatabase(); err != nil {
