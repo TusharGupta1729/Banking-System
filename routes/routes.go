@@ -3,6 +3,7 @@ package routes
 import (
 	"banking-system/handlers"
 	"banking-system/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,6 +19,8 @@ func SetupRoutes(r *gin.Engine,
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Banking API Running",
+			"status":  "Server is running successfully",
+			"usage":   "Use Postman or any API client to access the available endpoints",
 		})
 	})
 
