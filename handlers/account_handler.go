@@ -127,6 +127,24 @@ func (h *AccountHandler) Withdraw(c *gin.Context) {
 		return
 	}
 
+	account, err := h.service.GetAccountByID(uint(id))
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "account not found",
+		})
+		return
+	}
+
+	customerID, _ := c.Get("customer_id")
+
+	if account.CustomerID != customerID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "access denied",
+		})
+		return
+	}
+
 	err = h.service.Withdraw(uint(id), req.Amount)
 
 	if err != nil {
@@ -163,6 +181,20 @@ func (h *AccountHandler) GetAccountByID(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+
+	if role != "admin" {
+
+		customerID, _ := c.Get("customer_id")
+
+		if account.CustomerID != customerID.(uint) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "access denied",
+			})
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, account)
 }
 
@@ -177,7 +209,27 @@ func (h *AccountHandler) Transfer(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Transfer(
+	fromAccount, err := h.service.GetAccountByID(
+		req.FromAccount,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "source account not found",
+		})
+		return
+	}
+
+	customerID, _ := c.Get("customer_id")
+
+	if fromAccount.CustomerID != customerID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "access denied",
+		})
+		return
+	}
+
+	err = h.service.Transfer(
 		req.FromAccount,
 		req.ToAccount,
 		req.Amount,
@@ -206,6 +258,28 @@ func (h *AccountHandler) GetAccountTransactions(c *gin.Context) {
 			"error": "invalid account id",
 		})
 		return
+	}
+	account, err := h.service.GetAccountByID(uint(id))
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "account not found",
+		})
+		return
+	}
+
+	role, _ := c.Get("role")
+
+	if role.(string) != "admin" {
+
+		customerID, _ := c.Get("customer_id")
+
+		if account.CustomerID != customerID.(uint) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "access denied",
+			})
+			return
+		}
 	}
 
 	transactions, err := h.service.GetAccountTransactions(

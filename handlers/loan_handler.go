@@ -35,6 +35,10 @@ func (h *LoanHandler) CreateLoan(c *gin.Context) {
 		return
 	}
 
+	customerID, _ := c.Get("customer_id")
+
+	loan.CustomerID = customerID.(uint)
+
 	if err := h.service.CreateLoan(&loan); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -47,7 +51,28 @@ func (h *LoanHandler) CreateLoan(c *gin.Context) {
 
 func (h *LoanHandler) GetLoans(c *gin.Context) {
 
-	loans, err := h.service.GetLoans()
+	role, _ := c.Get("role")
+
+	if role.(string) == "admin" {
+
+		loans, err := h.service.GetLoans()
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, loans)
+		return
+	}
+
+	customerID, _ := c.Get("customer_id")
+
+	loans, err := h.service.GetLoansByCustomerID(
+		customerID.(uint),
+	)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -131,6 +156,24 @@ func (h *LoanHandler) RepayLoan(c *gin.Context) {
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
+		})
+		return
+	}
+
+	loan, err := h.service.GetLoanByID(uint(id))
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "loan not found",
+		})
+		return
+	}
+
+	customerID, _ := c.Get("customer_id")
+
+	if loan.CustomerID != customerID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "access denied",
 		})
 		return
 	}

@@ -24,18 +24,48 @@ func SetupRoutes(r *gin.Engine,
 		})
 	})
 
-	r.POST("/banks", bankHandler.CreateBank)
+	r.POST(
+		"/banks",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		bankHandler.CreateBank,
+	)
 	r.GET("/banks", bankHandler.GetBanks)
 
-	r.POST("/branches", branchHandler.CreateBranch)
+	r.POST(
+		"/branches",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		branchHandler.CreateBranch,
+	)
 	r.GET("/branches", branchHandler.GetBranches)
 
 	r.POST("/customers", customerHandler.CreateCustomer)
-	r.GET("/customers", customerHandler.GetCustomers)
-	r.GET("/customers/:id/accounts", customerHandler.GetCustomerAccounts)
+	r.GET(
+		"/customers",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		customerHandler.GetCustomers,
+	)
+	r.GET(
+		"/customers/:id/accounts",
+		middleware.AuthMiddleware(),
+		customerHandler.GetCustomerAccounts,
+	)
 
-	r.POST("/accounts", accountHandler.CreateAccount)
-	r.GET("/accounts", accountHandler.GetAccounts)
+	r.POST(
+		"/accounts",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		accountHandler.CreateAccount,
+	)
+
+	r.GET(
+		"/accounts",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		accountHandler.GetAccounts,
+	)
 	r.POST(
 		"/accounts/:id/deposit",
 		middleware.AuthMiddleware(),
@@ -46,22 +76,60 @@ func SetupRoutes(r *gin.Engine,
 		middleware.AuthMiddleware(),
 		accountHandler.Withdraw,
 	)
-	r.GET("/accounts/:id", accountHandler.GetAccountByID)
+	r.GET(
+		"/accounts/:id",
+		middleware.AuthMiddleware(),
+		accountHandler.GetAccountByID,
+	)
 	r.POST(
 		"/accounts/transfer",
 		middleware.AuthMiddleware(),
 		accountHandler.Transfer,
 	)
+	r.GET(
+		"/accounts/:id/transactions",
+		middleware.AuthMiddleware(),
+		accountHandler.GetAccountTransactions,
+	)
 
-	r.POST("/transactions", transactionHandler.CreateTransaction)
-	r.GET("/transactions", transactionHandler.GetTransactions)
-	r.GET("/accounts/:id/transactions", accountHandler.GetAccountTransactions)
+	r.GET(
+		"/transactions",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		transactionHandler.GetTransactions,
+	)
 
-	r.POST("/loans", loanHandler.CreateLoan)
-	r.GET("/loans", loanHandler.GetLoans)
-	r.POST("/loans/:id/approve", loanHandler.ApproveLoan)
-	r.POST("/loans/:id/reject", loanHandler.RejectLoan)
-	r.POST("/loans/:id/repay", loanHandler.RepayLoan)
+	r.POST(
+		"/loans",
+		middleware.AuthMiddleware(),
+		loanHandler.CreateLoan,
+	)
+
+	r.GET(
+		"/loans",
+		middleware.AuthMiddleware(),
+		loanHandler.GetLoans,
+	)
+
+	r.POST(
+		"/loans/:id/approve",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		loanHandler.ApproveLoan,
+	)
+
+	r.POST(
+		"/loans/:id/reject",
+		middleware.AuthMiddleware(),
+		middleware.AdminMiddleware(),
+		loanHandler.RejectLoan,
+	)
+
+	r.POST(
+		"/loans/:id/repay",
+		middleware.AuthMiddleware(),
+		loanHandler.RepayLoan,
+	)
 
 	r.POST("/login", authHandler.Login)
 }

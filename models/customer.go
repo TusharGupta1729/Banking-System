@@ -10,6 +10,8 @@ type Customer struct {
 	Phone        string `gorm:"unique"`
 	PasswordHash string `gorm:"not null"`
 
+	Role string `gorm:"default:customer"`
+
 	Accounts []Account
 	Loans    []Loan
 }

@@ -4,6 +4,7 @@ import (
 	"banking-system/models"
 	"banking-system/repository"
 	"errors"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,6 +38,8 @@ func (s *CustomerService) CreateCustomer(customer *models.Customer) error {
 	}
 
 	customer.PasswordHash = string(hashedPassword)
+
+	customer.Role = "customer"
 
 	return s.repo.Create(customer)
 }

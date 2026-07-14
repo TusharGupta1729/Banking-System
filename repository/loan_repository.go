@@ -38,6 +38,20 @@ func (r *LoanRepository) GetByID(id uint) (*models.Loan, error) {
 	return &loan, err
 }
 
+func (r *LoanRepository) GetByCustomerID(
+	customerID uint,
+) ([]models.Loan, error) {
+
+	var loans []models.Loan
+
+	err := config.DB.
+		Preload("Customer").
+		Where("customer_id = ?", customerID).
+		Find(&loans).Error
+
+	return loans, err
+}
+
 func (r *LoanRepository) Update(loan *models.Loan) error {
 	return config.DB.Save(loan).Error
 }

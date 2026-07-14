@@ -67,6 +67,20 @@ func (h *CustomerHandler) GetCustomerAccounts(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+
+	if role.(string) != "admin" {
+
+		customerID, _ := c.Get("customer_id")
+
+		if uint(id) != customerID.(uint) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "access denied",
+			})
+			return
+		}
+	}
+
 	accounts, err := h.service.GetCustomerAccounts(uint(id))
 
 	if err != nil {

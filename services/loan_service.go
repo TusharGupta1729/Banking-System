@@ -37,6 +37,20 @@ func (s *LoanService) GetLoans() ([]models.Loan, error) {
 	return s.repo.GetAll()
 }
 
+func (s *LoanService) GetLoanByID(
+	id uint,
+) (*models.Loan, error) {
+
+	return s.repo.GetByID(id)
+}
+
+func (s *LoanService) GetLoansByCustomerID(
+	customerID uint,
+) ([]models.Loan, error) {
+
+	return s.repo.GetByCustomerID(customerID)
+}
+
 func (s *LoanService) ApproveLoan(id uint) error {
 
 	loan, err := s.repo.GetByID(id)

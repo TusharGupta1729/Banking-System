@@ -43,7 +43,10 @@ func (s *AuthService) Login(
 		return "", errors.New("invalid credentials")
 	}
 
-	token, err := utils.GenerateToken(customer.ID)
+	token, err := utils.GenerateToken(
+		customer.ID,
+		customer.Role,
+	)
 
 	if err != nil {
 		return "", err
