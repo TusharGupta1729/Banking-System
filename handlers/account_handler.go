@@ -282,9 +282,7 @@ func (h *AccountHandler) GetAccountTransactions(c *gin.Context) {
 		}
 	}
 
-	transactions, err := h.service.GetAccountTransactions(
-		uint(id),
-	)
+	transactions, err := h.service.GetAccountTransactions(uint(id))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

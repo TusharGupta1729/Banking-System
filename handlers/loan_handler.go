@@ -70,9 +70,7 @@ func (h *LoanHandler) GetLoans(c *gin.Context) {
 
 	customerID, _ := c.Get("customer_id")
 
-	loans, err := h.service.GetLoansByCustomerID(
-		customerID.(uint),
-	)
+	loans, err := h.service.GetLoansByCustomerID(customerID.(uint))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

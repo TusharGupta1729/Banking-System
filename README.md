@@ -1,28 +1,26 @@
-﻿# Banking System API
+# Banking System API
 
 A backend banking system built with Go, Gin, PostgreSQL, and JWT authentication. This project models banks, branches, customers, accounts, transactions, and loans in a clean REST API.
 
----
-
 ## Overview
 
-This Banking System API is a simple backend for bank operations. Users can sign up, log in, open accounts, deposit and withdraw money, view transactions, and manage loans.
-
----
+This Banking System API is a simple backend for bank operations. Customers can sign up, log in, open accounts, deposit and withdraw money, transfer funds, view transaction history, and manage loans. Administrators can create banks and branches, open accounts on behalf of customers, view all records, and approve or reject loans.
 
 ## Features
 
-- Customer registration and login with secure password hashing
-- JWT authentication for deposit, withdrawal, and transfer routes
+- Customer registration and login with bcrypt password hashing
+- JWT authentication with role-based access control (`customer` / `admin`)
 - Create and manage banks and branches
 - Create and retrieve customer profiles
 - Open accounts for customers at specific branches
 - Check account balances and account details
 - Deposit money into accounts
 - Withdraw money from accounts, with balance checks
+- Transfer funds between accounts
+- Automatic transaction records for deposits, withdrawals, and transfers
 - View transaction history for each account
 - Apply for loans and track loan status
-- Repay pending loan balances
+- Admin approval/rejection of loans and customer repayment of pending balances
 
 ## Tech Stack
 
@@ -31,8 +29,7 @@ This Banking System API is a simple backend for bank operations. Users can sign 
 - PostgreSQL
 - GORM ORM
 - JWT authentication
-
----
+- bcrypt password hashing
 
 ## System Design
 
@@ -58,182 +55,241 @@ Customer
  └── Loan
 ```
 
----
-
 ## Database Schema
+
+All tables include an auto-managed `createdAt`, `updatedAt`, and `deletedAt` column supplied by GORM's `gorm.Model`. `updatedAt` and `deletedAt` (used for soft deletes) are omitted below for brevity.
 
 ### Bank
 
-| Field      | Type      |
-|------------|-----------|
-| id         | SERIAL    |
-| name       | VARCHAR   |
-| headoffice | VARCHAR   |
-| createdAt  | TIMESTAMP |
+|    Field    |   Type         |
+| ------------| ---------------|
+| `id`        | `BIGSERIAL`    |
+| `name`      | `VARCHAR(255)` |
+| `headoffice`| `VARCHAR(255)` |
+| `createdAt` | `TIMESTAMPTZ`  |
+
 
 Column definitions:
-
-- `id`: Unique bank record ID. In code, this comes from GORM's `gorm.Model`, which uses a `uint` primary key by default.
+- `id`: Unique bank record ID. In code, this comes from GORM's `gorm.Model`.
 - `name`: Name of the bank.
 - `headoffice`: Head office location of the bank.
-- `createdAt`: Date and time when the bank record was created. In code, this comes from GORM's `gorm.Model`.
+- `createdAt`: Date and time when the bank record was created.
 
 ### Branch
 
-| Field    | Type    |
-|----------|---------|
-| id       | SERIAL  |
-| bankID   | INTEGER |
-| name     | VARCHAR |
-| iFSCCode | VARCHAR |
-| address  | TEXT    |
+|    Field    |      Type      |
+| ------------| ---------------|
+| `id`        | `BIGSERIAL`    |
+| `bankID`    | `BIGINT`       |
+| `name`      | `VARCHAR(255)` |
+| `iFSCCode`  | `VARCHAR(20)`  |
+| `address`   | `TEXT`         |
+| `createdAt` | `TIMESTAMPTZ`  |
 
 Column definitions:
-
-- `id`: Unique branch record ID. In code, this comes from GORM's `gorm.Model`, which uses a `uint` primary key by default.
-- `bankID`: ID of the bank to which the branch belongs. In code, this is implemented as a `uint` foreign key.
+- `id`: Unique branch record ID. In code, this comes from GORM's `gorm.Model`.
+- `bankID`: ID of the bank to which the branch belongs, implemented as a foreign key.
 - `name`: Name of the branch.
 - `iFSCCode`: Unique IFSC code of the branch.
 - `address`: Physical address of the branch.
+- `createdAt`: Date and time when the branch record was created.
 
 ### Customer
 
-| Field        | Type      |
-|--------------|-----------|
-| id           | SERIAL    |
-| name         | VARCHAR   |
-| email        | VARCHAR   |
-| phone        | VARCHAR   |
-| passwordHash | VARCHAR   |
-| createdAt    | TIMESTAMP |
+|     Field      |      Type      |
+| ---------------| ---------------|
+| `id`           | `BIGSERIAL`    |
+| `name`         | `VARCHAR(255)` |
+| `email`        | `VARCHAR(255)` |
+| `phone`        | `VARCHAR(20)`  |
+| `passwordHash` | `VARCHAR(255)` |
+| `role`         | `VARCHAR(20)`  |
+| `createdAt`    | `TIMESTAMPTZ`  |
 
 Column definitions:
-
-- `id`: Unique customer record ID. In code, this comes from GORM's `gorm.Model`, which uses a `uint` primary key by default.
+- `id`: Unique customer record ID. In code, this comes from GORM's `gorm.Model`.
 - `name`: Full name of the customer.
 - `email`: Unique email address used for login.
 - `phone`: Customer phone number.
-- `passwordHash`: Hashed password stored securely instead of plain text.
-- `createdAt`: Date and time when the customer record was created. In code, this comes from GORM's `gorm.Model`.
+- `passwordHash`: bcrypt hash of the customer's password, stored instead of plain text.
+- `role`: Authorization role, defaults to `customer`; an `admin` can access administrative routes.
+- `createdAt`: Date and time when the customer record was created.
 
 ### Account
 
-| Field         | Type      |
-|---------------|-----------|
-| id            | SERIAL    |
-| customerID    | INTEGER   |
-| branchID      | INTEGER   |
-| accountNumber | VARCHAR   |
-| balance       | DECIMAL   |
-| accountType   | VARCHAR   |
-| createdAt     | TIMESTAMP |
+|      Field      |      Type       |
+| ----------------| ----------------|
+| `id`            | `BIGSERIAL`     |
+| `customerID`    | `BIGINT`        |
+| `branchID`      | `BIGINT`        |
+| `accountNumber` | `VARCHAR(50)`   |
+| `balance`       | `NUMERIC(15,2)` |
+| `accountType`   | `VARCHAR(20)`   |
+| `status`        | `VARCHAR(20)`   |
+| `createdAt`     | `TIMESTAMPTZ`   |
 
 Column definitions:
-
-- `id`: Unique account record ID. In code, this comes from GORM's `gorm.Model`, which uses a `uint` primary key by default.
-- `customerID`: ID of the customer who owns the account. In code, this is implemented as a `uint` foreign key.
-- `branchID`: ID of the branch where the account is opened. In code, this is implemented as a `uint` foreign key.
+- `id`: Unique account record ID. In code, this comes from GORM's `gorm.Model`.
+- `customerID`: ID of the customer who owns the account, implemented as a foreign key.
+- `branchID`: ID of the branch where the account is opened, implemented as a foreign key.
 - `accountNumber`: Unique account number.
 - `balance`: Current available balance in the account.
-- `accountType`: Type of account, such as savings or current.
-- `createdAt`: Date and time when the account record was created. In code, this comes from GORM's `gorm.Model`.
+- `accountType`: Type of account, such as `Savings` or `Current`.
+- `status`: Current account state, such as `Active` or `Inactive`.
+- `createdAt`: Date and time when the account record was created.
 
 ### Transaction
 
-| Field     | Type      |
-|-----------|-----------|
-| id        | SERIAL    |
-| accountID | INTEGER   |
-| type      | VARCHAR   |
-| amount    | DECIMAL   |
-| createdAt | TIMESTAMP |
+|    Field    |      Type       |
+| ------------| ----------------|
+| `id`        | `BIGSERIAL`     |
+| `accountID` | `BIGINT`        |
+| `type`      | `VARCHAR(20)`   |
+| `amount`    | `NUMERIC(15,2)` |
+| `createdAt` | `TIMESTAMPTZ`   |
 
 Column definitions:
-
-- `id`: Unique transaction record ID. In code, this comes from GORM's `gorm.Model`, which uses a `uint` primary key by default.
-- `accountID`: ID of the account linked with the transaction. In code, this is implemented as a `uint` foreign key.
-- `type`: Transaction type, such as deposit, withdraw, transfer in, or transfer out.
+- `id`: Unique transaction record ID. In code, this comes from GORM's `gorm.Model`.
+- `accountID`: ID of the account linked with the transaction, implemented as a foreign key.
+- `type`: Transaction type, such as `Deposit`, `Withdraw`, `Transfer In`, or `Transfer Out`.
 - `amount`: Amount involved in the transaction.
-- `createdAt`: Date and time when the transaction record was created. In code, this comes from GORM's `gorm.Model`.
+- `createdAt`: Date and time when the transaction record was created.
+
+Transactions are generated automatically by deposits, withdrawals, and transfers — there is no endpoint for creating one directly.
 
 ### Loan
 
-| Field           | Type      |
-|-----------------|-----------|
-| id              | SERIAL    |
-| customerID      | INTEGER   |
-| principalAmount | DECIMAL   |
-| interestRate    | DECIMAL   |
-| totalAmount     | DECIMAL   |
-| pendingAmount   | DECIMAL   |
-| status          | VARCHAR   |
-| createdAt       | TIMESTAMP |
+|       Field       |      Type       |
+| ------------------| ----------------|
+| `id`              | `BIGSERIAL`     |
+| `customerID`      | `BIGINT`        |
+| `principalAmount` | `NUMERIC(15,2)` |
+| `interestRate`    | `NUMERIC(5,2)`  |
+| `totalAmount`     | `NUMERIC(15,2)` |
+| `pendingAmount`   | `NUMERIC(15,2)` |
+| `status`          | `VARCHAR(20)`   |
+| `createdAt`       | `TIMESTAMPTZ`   |
 
 Column definitions:
-
-- `id`: Unique loan record ID. In code, this comes from GORM's `gorm.Model`, which uses a `uint` primary key by default.
-- `customerID`: ID of the customer who applied for the loan. In code, this is implemented as a `uint` foreign key.
+- `id`: Unique loan record ID. In code, this comes from GORM's `gorm.Model`.
+- `customerID`: ID of the customer who applied for the loan, implemented as a foreign key.
 - `principalAmount`: Original loan amount requested by the customer.
 - `interestRate`: Interest rate applied to the loan.
 - `totalAmount`: Total amount to be repaid.
-- `pendingAmount`: Remaining unpaid loan amount.
-- `status`: Current loan status, such as pending, approved, rejected, or closed.
-- `createdAt`: Date and time when the loan record was created. In code, this comes from GORM's `gorm.Model`.
+- `pendingAmount`: Remaining unpaid loan amount, set from `totalAmount` when the loan is created.
+- `status`: Current loan status — `Pending`, `Approved`, `Rejected`, or `Closed`.
+- `createdAt`: Date and time when the loan record was created.
 
----
+## Architecture
+
+The project follows a layered architecture with a clear separation of concerns.
+
+```text
+Client
+  ↓
+Routes + Middleware
+  ↓
+Handlers
+  ↓
+Services
+  ↓
+Repositories
+  ↓
+PostgreSQL
+```
+
+Responsibilities:
+
+- **Routes**: define API endpoints, attach middleware, and map requests to handlers
+- **Middleware**: verifies JWTs and enforces the `admin` role on protected routes
+- **Handlers**: process HTTP requests and responses
+- **Services**: implement business logic and validation
+- **Repositories**: perform database queries and persistence
+- **Models**: represent database entities and data structures
 
 ## API Endpoints
 
+Endpoints are listed in the order they're registered in `routes/routes.go`. **Protected** routes require `Authorization: Bearer <token>`. **Admin** routes require that token's `role` claim to be `admin`.
+
 ### Root
 
-- GET / — Check API running message
-
-### Authentication
-
-- POST /login — Log in and receive a JWT token
+| Method | Path  | Access | Description               |
+| ------ | ----- | ------ | ------------------------- |
+| GET    | `/`   | Public | Check API running message |
 
 ### Banks
 
-- POST /banks — Create a new bank
-- GET /banks — List all banks
+| Method | Path     | Access | Description         |
+| ------ | -------- | ------ | ------------------- |
+| POST   | `/banks` | Admin  | Create a new bank   |
+| GET    | `/banks` | Public | List all banks      |
 
 ### Branches
 
-- POST /branches — Create a branch
-- GET /branches — List all branches
+| Method | Path        | Access | Description       |
+| ------ | ----------- | ------ | ----------------- |
+| POST   | `/branches` | Admin  | Create a branch   |
+| GET    | `/branches` | Public | List all branches |
 
 ### Customers
 
-- POST /customers — Create a customer
-- GET /customers — List all customers
-- GET /customers/:id/accounts — List accounts for a customer
+| Method | Path | Access | Description |
+| ------ | ------------------------- | --------- | ---------------------------- |
+| POST   | `/customers`              | Public    | Create a customer            |
+| GET    | `/customers`              | Admin     | List all customers           |
+| GET    | `/customers/:id/accounts` | Protected | List accounts for a customer |
 
 ### Accounts
 
-- POST /accounts — Open an account
-- GET /accounts — List all accounts
-- GET /accounts/:id — Get account details
-- POST /accounts/:id/deposit — Deposit money into an account
-- POST /accounts/:id/withdraw — Withdraw money from an account
-- POST /accounts/transfer — Transfer money between accounts
-- GET /accounts/:id/transactions — Get transaction history for an account
+| Method | Path | Access | Description |
+| ------ | ---------------------------- | --------- | ---------------------------------------- |
+| POST   | `/accounts`                  | Admin     | Open an account                          |
+| GET    | `/accounts`                  | Admin     | List all accounts                        |
+| POST   | `/accounts/:id/deposit`      | Protected | Deposit money into an account            |
+| POST   | `/accounts/:id/withdraw`     | Protected | Withdraw money from an account           |
+| GET    | `/accounts/:id`              | Protected | Get account details                      |
+| POST   | `/accounts/transfer`         | Protected | Transfer money between accounts          |
+| GET    | `/accounts/:id/transactions` | Protected | Get transaction history for an account   |
 
 ### Transactions
 
-- POST /transactions — Create a transaction
-- GET /transactions — List all transactions
+| Method | Path |  Access   | Description |                       |
+| ------ | ---------------- | ------------| --------------------- |
+| GET    | `/transactions`  | Admin       | List all transactions |
+
+> There is no `POST /transactions` endpoint — records are created automatically by deposits, withdrawals, and transfers.
 
 ### Loans
 
-- POST /loans — Apply for a loan
-- GET /loans — List all loans
-- POST /loans/:id/approve — Approve a loan
-- POST /loans/:id/reject — Reject a loan
-- POST /loans/:id/repay — Repay a loan
+| Method | Path | Access | Description |
+| ------ | --------------------- | --------- | ---------------- |
+| POST   | `/loans`              | Protected | Apply for a loan |
+| GET    | `/loans`              | Protected | List loans       |
+| POST   | `/loans/:id/approve`  | Admin     | Approve a loan   |
+| POST   | `/loans/:id/reject`   | Admin     | Reject a loan    |
+| POST   | `/loans/:id/repay`    | Protected | Repay a loan     |
 
----
+### Authentication
+
+| Method | Path | Access | Description |
+| ------ | -------- | ------ | -------------------------------- |
+| POST   | `/login` | Public | Log in and receive a JWT token   |
 
 ## API Request and Response Examples
+
+### Check Server Status
+
+`GET /`
+
+Response:
+
+```json
+{
+  "message": "Banking API Running",
+  "status": "Server is running successfully",
+  "usage": "Use Postman or any API client to access the available endpoints"
+}
+```
 
 ### Login
 
@@ -258,7 +314,7 @@ Response:
 
 ### Create Bank
 
-`POST /banks`
+`POST /banks` — **Admin**
 
 Request:
 
@@ -276,13 +332,13 @@ Response:
   "id": 1,
   "name": "State Bank",
   "headoffice": "Delhi",
-  "createdAt": "2026-07-09T10:00:00Z"
+  "createdAt": "2026-07-14T10:00:00Z"
 }
 ```
 
 ### Create Branch
 
-`POST /branches`
+`POST /branches` — **Admin**
 
 Request:
 
@@ -322,6 +378,8 @@ Request:
 }
 ```
 
+> The `passwordHash` request field is treated as a plaintext password and is bcrypt-hashed before storage.
+
 Response:
 
 ```json
@@ -329,13 +387,34 @@ Response:
   "id": 1,
   "name": "Tushar Gupta",
   "email": "tushar@example.com",
-  "phone": "9999999999"
+  "phone": "9999999999",
+  "role": "customer"
 }
+```
+
+### Get Customer Accounts
+
+`GET /customers/:id/accounts` — **Protected**
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "customerID": 1,
+    "branchID": 1,
+    "accountNumber": "ACC1001",
+    "balance": 5000,
+    "accountType": "Savings",
+    "status": "Active"
+  }
+]
 ```
 
 ### Create Account
 
-`POST /accounts`
+`POST /accounts` — **Admin**
 
 Request:
 
@@ -345,7 +424,8 @@ Request:
   "branchID": 1,
   "accountNumber": "ACC1001",
   "balance": 0,
-  "accountType": "Savings"
+  "accountType": "Savings",
+  "status": "Active"
 }
 ```
 
@@ -358,13 +438,14 @@ Response:
   "branchID": 1,
   "accountNumber": "ACC1001",
   "balance": 0,
-  "accountType": "Savings"
+  "accountType": "Savings",
+  "status": "Active"
 }
 ```
 
 ### Deposit Money
 
-`POST /accounts/:id/deposit`
+`POST /accounts/:id/deposit` — **Protected**
 
 Request:
 
@@ -384,7 +465,7 @@ Response:
 
 ### Withdraw Money
 
-`POST /accounts/:id/withdraw`
+`POST /accounts/:id/withdraw` — **Protected**
 
 Request:
 
@@ -402,9 +483,27 @@ Response:
 }
 ```
 
+### Get Account Details
+
+`GET /accounts/:id` — **Protected**
+
+Response:
+
+```json
+{
+  "id": 1,
+  "customerID": 1,
+  "branchID": 1,
+  "accountNumber": "ACC1001",
+  "balance": 4000,
+  "accountType": "Savings",
+  "status": "Active"
+}
+```
+
 ### Transfer Money
 
-`POST /accounts/transfer`
+`POST /accounts/transfer` — **Protected**
 
 Request:
 
@@ -424,45 +523,64 @@ Response:
 }
 ```
 
-### Create Transaction
+### Get Transaction History for an Account
 
-`POST /transactions`
-
-Request:
-
-```json
-{
-  "accountID": 1,
-  "type": "Deposit",
-  "amount": 5000
-}
-```
+`GET /accounts/:id/transactions` — **Protected**
 
 Response:
 
 ```json
-{
-  "id": 1,
-  "accountID": 1,
-  "type": "Deposit",
-  "amount": 5000
-}
+[
+  {
+    "id": 1,
+    "accountID": 1,
+    "type": "Deposit",
+    "amount": 5000,
+    "createdAt": "2026-07-14T10:20:00Z"
+  },
+  {
+    "id": 2,
+    "accountID": 1,
+    "type": "Withdraw",
+    "amount": 1000,
+    "createdAt": "2026-07-14T10:22:00Z"
+  }
+]
+```
+
+### List All Transactions
+
+`GET /transactions` — **Admin**
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "accountID": 1,
+    "type": "Deposit",
+    "amount": 5000,
+    "createdAt": "2026-07-14T10:20:00Z"
+  }
+]
 ```
 
 ### Create Loan
 
-`POST /loans`
+`POST /loans` — **Protected**
 
 Request:
 
 ```json
 {
-  "customerID": 1,
   "principalAmount": 100000,
   "interestRate": 10,
   "totalAmount": 110000
 }
 ```
+
+> The customer is taken from the JWT, so `customerID` does not need to be provided in the request body. New loans start with `Pending` status and `pendingAmount` equal to `totalAmount`.
 
 Response:
 
@@ -478,9 +596,29 @@ Response:
 }
 ```
 
+### List Loans
+
+`GET /loans` — **Protected**
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "customerID": 1,
+    "principalAmount": 100000,
+    "interestRate": 10,
+    "totalAmount": 110000,
+    "pendingAmount": 110000,
+    "status": "Pending"
+  }
+]
+```
+
 ### Approve Loan
 
-`POST /loans/:id/approve`
+`POST /loans/:id/approve` — **Admin**
 
 Response:
 
@@ -492,7 +630,7 @@ Response:
 
 ### Reject Loan
 
-`POST /loans/:id/reject`
+`POST /loans/:id/reject` — **Admin**
 
 Response:
 
@@ -504,7 +642,7 @@ Response:
 
 ### Repay Loan
 
-`POST /loans/:id/repay`
+`POST /loans/:id/repay` — **Protected**
 
 Request:
 
@@ -530,33 +668,6 @@ Response:
 }
 ```
 
----
-
-## Architecture
-
-The project follows a layered architecture with a clear separation of concerns.
-
-```
-Client
-  ↓
-Routes
-  ↓
-Handlers
-  ↓
-Services
-  ↓
-Repositories
-  ↓
-PostgreSQL
-```
-
-Responsibilities:
-- Routes: define API endpoints and map requests to handlers
-- Handlers: process HTTP requests and responses
-- Services: implement business logic and validation
-- Repositories: perform database queries and persistence
-- Models: represent database entities and data structures
-
 ## Project Structure
 
 ```text
@@ -566,40 +677,53 @@ banking-system/
 ├── config/
 │   └── database.go
 ├── handlers/
-│   ├── auth_handler.go
 │   ├── account_handler.go
+│   ├── auth_handler.go
 │   ├── bank_handler.go
 │   ├── branch_handler.go
-│   └── loan_handler.go
+│   ├── customer_handler.go
+│   ├── loan_handler.go
+│   └── transaction_handler.go
 ├── middleware/
-│   └── auth_middleware.go
+│   ├── admin_middleware.go
+│   └── jwt_middleware.go
 ├── models/
+│   ├── account.go
 │   ├── bank.go
 │   ├── branch.go
 │   ├── customer.go
-│   ├── account.go
-│   ├── transaction.go
-│   └── loan.go
+│   ├── loan.go
+│   └── transaction.go
 ├── repository/
-│   ├── bank_repository.go
 │   ├── account_repository.go
-│   └── loan_repository.go
-├── services/
-│   ├── auth_service.go
-│   ├── account_service.go
-│   └── loan_service.go
+│   ├── bank_repository.go
+│   ├── branch_repository.go
+│   ├── customer_repository.go
+│   ├── loan_repository.go
+│   └── transaction_repository.go
 ├── routes/
 │   └── routes.go
-├── migrations/
+├── services/
+│   ├── account_service.go
+│   ├── auth_service.go
+│   ├── bank_service.go
+│   ├── branch_service.go
+│   ├── customer_service.go
+│   ├── loan_service.go
+│   └── transaction_service.go
+├── utils/
+│   └── jwt.go
 ├── docs/
+├── migrations/
+├── scripts/
 ├── .env
+├── .env.example
 ├── .gitignore
 ├── go.mod
 ├── go.sum
+├── render.yaml
 └── README.md
 ```
-
----
 
 ## Environment Variables
 
@@ -611,7 +735,7 @@ JWT_SECRET=your_jwt_secret
 PORT=8080
 ```
 
----
+`DATABASE_URL` and `JWT_SECRET` are required. `PORT` defaults to `8080` when omitted.
 
 ## Setup & Run
 
@@ -619,22 +743,22 @@ PORT=8080
 2. Create a PostgreSQL database.
 3. Copy `.env.example` to `.env` and set your database credentials.
 4. Install dependencies:
-
-```bash
-go mod download
-```
-
+   ```bash
+   go mod download
+   ```
 5. Run the application:
+   ```bash
+   go run ./cmd/main.go
+   ```
+6. Verify that it's running:
+   ```bash
+   curl http://localhost:8080/
+   ```
 
-```bash
-go run ./cmd/main.go
-```
-
----
+The server automatically creates or updates the tables for Bank, Branch, Customer, Account, Transaction, and Loan on startup.
 
 ## Author
 
-Tushar Gupta
+**Tushar Gupta**
 
-B.Tech Computer Science & Engineering
-Delhi Technological University (DTU)
+B.Tech Computer Science & Engineering, Delhi Technological University (DTU)

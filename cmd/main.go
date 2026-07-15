@@ -67,10 +67,7 @@ func main() {
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	accountRepo := repository.NewAccountRepository()
-	accountService := services.NewAccountService(
-		accountRepo,
-		transactionRepo,
-	)
+	accountService := services.NewAccountService(accountRepo, transactionRepo)
 	accountHandler := handlers.NewAccountHandler(accountService)
 
 	loanRepo := repository.NewLoanRepository()
@@ -97,6 +94,7 @@ func main() {
 	}
 
 	fmt.Println("Server running on port", port)
+	fmt.Println("Welcome `Tushar` in your Banking System")
 	if err := r.Run(":" + port); err != nil {
 		fmt.Println("Server failed to start:", err)
 	}

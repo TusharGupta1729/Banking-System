@@ -30,6 +30,7 @@ func SetupRoutes(r *gin.Engine,
 		middleware.AdminMiddleware(),
 		bankHandler.CreateBank,
 	)
+
 	r.GET("/banks", bankHandler.GetBanks)
 
 	r.POST(
@@ -38,15 +39,18 @@ func SetupRoutes(r *gin.Engine,
 		middleware.AdminMiddleware(),
 		branchHandler.CreateBranch,
 	)
+
 	r.GET("/branches", branchHandler.GetBranches)
 
 	r.POST("/customers", customerHandler.CreateCustomer)
+
 	r.GET(
 		"/customers",
 		middleware.AuthMiddleware(),
 		middleware.AdminMiddleware(),
 		customerHandler.GetCustomers,
 	)
+
 	r.GET(
 		"/customers/:id/accounts",
 		middleware.AuthMiddleware(),
@@ -66,26 +70,31 @@ func SetupRoutes(r *gin.Engine,
 		middleware.AdminMiddleware(),
 		accountHandler.GetAccounts,
 	)
+
 	r.POST(
 		"/accounts/:id/deposit",
 		middleware.AuthMiddleware(),
 		accountHandler.Deposit,
 	)
+
 	r.POST(
 		"/accounts/:id/withdraw",
 		middleware.AuthMiddleware(),
 		accountHandler.Withdraw,
 	)
+
 	r.GET(
 		"/accounts/:id",
 		middleware.AuthMiddleware(),
 		accountHandler.GetAccountByID,
 	)
+
 	r.POST(
 		"/accounts/transfer",
 		middleware.AuthMiddleware(),
 		accountHandler.Transfer,
 	)
+
 	r.GET(
 		"/accounts/:id/transactions",
 		middleware.AuthMiddleware(),
